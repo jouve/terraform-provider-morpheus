@@ -295,7 +295,17 @@ func resourceSAMLIdentitySourceRead(ctx context.Context, d *schema.ResourceData,
 	}
 	d.Set("role_mapping", roleMappingPayload)
 	d.Set("code", identitySource.Code)
-	d.Set("provider_settings", identitySource.ProviderSettings)
+	provider_settings := map[string]string{}
+	if identitySource.ProviderSettings.AscUrl != "" {
+		provider_settings["asc_url"] = identitySource.ProviderSettings.AscUrl
+	}
+	if identitySource.ProviderSettings.EntityId != "" {
+		provider_settings["entity_id"] = identitySource.ProviderSettings.EntityId
+	}
+	if identitySource.ProviderSettings.SpMetadata != "" {
+		provider_settings["sp_metadata"] = identitySource.ProviderSettings.SpMetadata
+	}
+	d.Set("provider_settings", provider_settings)
 	return diags
 }
 
