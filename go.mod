@@ -1,8 +1,8 @@
 module github.com/gomorpheus/terraform-provider-morpheus
 
-go 1.24.5
+go 1.25.0
 
-replace github.com/gomorpheus/morpheus-go-sdk => github.com/jouve/morpheus-go-sdk v0.5.4-0.20250611165652-3c7fa7981deb
+replace github.com/gomorpheus/morpheus-go-sdk => github.com/jouve/morpheus-go-sdk v0.5.4-0.20250819180008-dace4ebf6fda
 
 require (
 	github.com/gomorpheus/morpheus-go-sdk v0.0.0-00010101000000-000000000000
@@ -26,7 +26,7 @@ require (
 	github.com/bmatcuk/doublestar/v4 v4.8.1 // indirect
 	github.com/cloudflare/circl v1.6.1 // indirect
 	github.com/fatih/color v1.16.0 // indirect
-	github.com/go-resty/resty/v2 v2.14.0 // indirect
+	github.com/go-resty/resty/v2 v2.16.5 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect

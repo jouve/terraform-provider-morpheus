@@ -139,6 +139,17 @@ func resourceSAMLIdentitySource() *schema.Resource {
 				Optional:    true,
 				Computed:    true,
 			},
+			"code": {
+				Type:     schema.TypeString,
+				Computed: true,
+			},
+			"provider_settings": {
+				Type:     schema.TypeMap,
+				Computed: true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
 		},
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
@@ -283,6 +294,8 @@ func resourceSAMLIdentitySourceRead(ctx context.Context, d *schema.ResourceData,
 		roleMappingPayload = append(roleMappingPayload, roleOutput)
 	}
 	d.Set("role_mapping", roleMappingPayload)
+	d.Set("code", identitySource.Code)
+	d.Set("provider_settings", identitySource.ProviderSettings)
 	return diags
 }
 
