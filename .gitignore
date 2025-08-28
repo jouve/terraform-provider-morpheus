@@ -36,3 +36,4 @@ website/vendor
 !command/test-fixtures/**/.terraform/
 
 dist/
+morpheus-go-sdk
