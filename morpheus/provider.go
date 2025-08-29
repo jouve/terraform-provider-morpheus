@@ -12,7 +12,7 @@ func Provider() *schema.Provider {
 		Schema: map[string]*schema.Schema{
 			"url": {
 				Type:        schema.TypeString,
-				Required:    true,
+				Optional:    true,
 				Description: "The URL of the Morpheus Data Appliance where requests will be directed.",
 				DefaultFunc: schema.EnvDefaultFunc("MORPHEUS_API_URL", nil),
 			},

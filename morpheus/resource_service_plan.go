@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
-	"time"
 
 	"log"
 
@@ -232,6 +231,25 @@ func resourceServicePlanCreate(ctx context.Context, d *schema.ResourceData, meta
 		ranges["maxStorage"] = storage_ranges["maximum"].(string)
 	}
 
+	for _, r := range []string{
+		"minStorage",
+		"maxStorage",
+		"minPerDiskSize",
+		"maxPerDiskSize",
+		"minMemory",
+		"maxMemory",
+		"minCores",
+		"maxCores",
+		"minSockets",
+		"maxSockets",
+		"minCoresPerSocket",
+		"maxCoresPerSocket",
+	} {
+		if _, ok := ranges[r]; !ok {
+			ranges[r] = ""
+		}
+	}
+
 	config := make(map[string]interface{})
 	config["ranges"] = ranges
 	servicePlan["config"] = config
@@ -332,9 +350,9 @@ func resourceServicePlanRead(ctx context.Context, d *schema.ResourceData, meta i
 	var resp *morpheus.Response
 	var err error
 	if id == "" && name != "" {
-		resp, err = client.FindPlanByName(name)
+		resp, err = client.FindServicePlanByName(name)
 	} else if id != "" {
-		resp, err = client.GetPlan(toInt64(id), &morpheus.Request{})
+		resp, err = client.GetServicePlan(toInt64(id), &morpheus.Request{})
 	} else {
 		return diag.Errorf("Plan cannot be read without name or id")
 	}
@@ -353,56 +371,56 @@ func resourceServicePlanRead(ctx context.Context, d *schema.ResourceData, meta i
 	log.Printf("API RESPONSE: %s", resp)
 
 	// store resource data
-	var servicePlan MorpheusPlan
-	if err := json.Unmarshal(resp.Body, &servicePlan); err != nil {
-		return diag.FromErr(err)
+	var servicePlan, ok = resp.Result.(*morpheus.GetServicePlanResult)
+	if !ok {
+		return diag.FromErr(fmt.Errorf("invalid result %T", resp.Result))
 	}
 
 	d.SetId(intToString(int(servicePlan.ServicePlan.ID)))
 	d.Set("name", servicePlan.ServicePlan.Name)
 	d.Set("active", servicePlan.ServicePlan.Active)
 	d.Set("code", servicePlan.ServicePlan.Code)
-	d.Set("display_order", servicePlan.ServicePlan.Sortorder)
+	d.Set("display_order", servicePlan.ServicePlan.SortOrder)
 	d.Set("provision_type", servicePlan.ServicePlan.Provisiontype.Code)
-	d.Set("region_code", servicePlan.ServicePlan.Regioncode)
-	d.Set("max_memory", servicePlan.ServicePlan.Maxmemory)
-	d.Set("max_storage", servicePlan.ServicePlan.Maxstorage)
-	d.Set("storage_size_type", servicePlan.ServicePlan.Config.Storagesizetype)
-	d.Set("memory_size_type", servicePlan.ServicePlan.Config.Memorysizetype)
-	d.Set("custom_memory", servicePlan.ServicePlan.Custommaxmemory)
-	d.Set("max_cores", servicePlan.ServicePlan.Maxcores)
-	d.Set("custom_cores", servicePlan.ServicePlan.Customcores)
+	d.Set("region_code", servicePlan.ServicePlan.RegionCode)
+	d.Set("max_memory", servicePlan.ServicePlan.MaxMemory)
+	d.Set("max_storage", servicePlan.ServicePlan.MaxStorage)
+	d.Set("storage_size_type", servicePlan.ServicePlan.Config.StorageSizeType)
+	d.Set("memory_size_type", servicePlan.ServicePlan.Config.MemorySizeType)
+	d.Set("custom_memory", servicePlan.ServicePlan.CustomMaxMemory)
+	d.Set("max_cores", servicePlan.ServicePlan.MaxCores)
+	d.Set("custom_cores", servicePlan.ServicePlan.CustomCores)
 	if _, ok := d.GetOk("cores_per_socket"); ok {
-		d.Set("cores_per_socket", servicePlan.ServicePlan.Corespersocket)
+		d.Set("cores_per_socket", servicePlan.ServicePlan.CoresPerSocket)
 	}
 	if d.Get("customize_root_volume") != nil {
-		d.Set("customize_root_volume", servicePlan.ServicePlan.Custommaxstorage)
+		d.Set("customize_root_volume", servicePlan.ServicePlan.CustomMaxStorage)
 	}
 	if d.Get("customize_extra_volumes") != nil {
-		d.Set("customize_extra_volumes", servicePlan.ServicePlan.Custommaxdatastorage)
+		d.Set("customize_extra_volumes", servicePlan.ServicePlan.CustomMaxDataStorage)
 	}
 	if d.Get("add_volumes") != nil {
-		d.Set("add_volumes", servicePlan.ServicePlan.Addvolumes)
+		d.Set("add_volumes", servicePlan.ServicePlan.AddVolumes)
 	}
 	if _, ok := d.GetOk("max_disks_allowed"); ok {
-		d.Set("max_disks_allowed", servicePlan.ServicePlan.Maxdisks)
+		d.Set("max_disks_allowed", servicePlan.ServicePlan.MaxDisks)
 	}
 	if _, ok := d.GetOk("custom_storage_range"); ok {
-		d.Set("custom_storage_range", flattenRanges("storage", &servicePlan))
+		d.Set("custom_storage_range", flattenRanges("storage", servicePlan))
 	}
 
 	if _, ok := d.GetOk("custom_memory_range"); ok {
-		d.Set("custom_memory_range", flattenRanges("memory", &servicePlan))
+		d.Set("custom_memory_range", flattenRanges("memory", servicePlan))
 	}
 
 	if _, ok := d.GetOk("custom_cores_range"); ok {
-		d.Set("custom_cores_range", flattenRanges("cores", &servicePlan))
+		d.Set("custom_cores_range", flattenRanges("cores", servicePlan))
 	}
 
 	// Create an array from the price set ids
 	var priceSetIds []int
-	if len(servicePlan.ServicePlan.Pricesets) > 0 {
-		for _, v := range servicePlan.ServicePlan.Pricesets {
+	if len(servicePlan.ServicePlan.PriceSets) > 0 {
+		for _, v := range servicePlan.ServicePlan.PriceSets {
 			priceSetIds = append(priceSetIds, int(v.ID))
 		}
 	}
@@ -587,19 +605,27 @@ func FindProvisionTypeByCode(client *morpheus.Client, code string) (*morpheus.Re
 	return client.GetProvisionType(int64(provisionTypeID), &morpheus.Request{})
 }
 
-func flattenRanges(rangeType string, plan *MorpheusPlan) []interface{} {
+func flattenRanges(rangeType string, plan *morpheus.GetServicePlanResult) []interface{} {
 	result := make([]interface{}, 0, 1)
 	data := make(map[string]interface{})
 	switch rangeType {
 	case "storage":
-		data["minimum"] = plan.ServicePlan.Config.Ranges.Minstorage
-		data["maximum"] = plan.ServicePlan.Config.Ranges.Maxstorage
+		data["minimum"] = plan.ServicePlan.Config.Ranges["minStorage"]
+		data["maximum"] = plan.ServicePlan.Config.Ranges["maxStorage"]
 	case "memory":
-		data["minimum"] = plan.ServicePlan.Config.Ranges.Minmemory
-		data["maximum"] = plan.ServicePlan.Config.Ranges.Maxmemory
+		if i, ok := plan.ServicePlan.Config.Ranges["minMemory"].(int); ok {
+			data["minimum"] = i
+		} else {
+			data["minimum"] = nil
+		}
+		if i, ok := plan.ServicePlan.Config.Ranges["maxMemory"].(int); ok {
+			data["maximum"] = i
+		} else {
+			data["maximum"] = nil
+		}
 	case "cores":
-		data["minimum"] = plan.ServicePlan.Config.Ranges.Mincores
-		data["maximum"] = plan.ServicePlan.Config.Ranges.Maxcores
+		data["minimum"] = plan.ServicePlan.Config.Ranges["minCores"]
+		data["maximum"] = plan.ServicePlan.Config.Ranges["maxCores"]
 	}
 
 	result = append(result, data)
@@ -630,80 +656,4 @@ func matchPriceSetsWithSchema(priceSets []int, declaredPriceSets []interface{}) 
 		result = append(result, rcpt)
 	}
 	return result
-}
-
-type MorpheusPlan struct {
-	ServicePlan struct {
-		ID                   int         `json:"id"`
-		Name                 string      `json:"name"`
-		Code                 string      `json:"code"`
-		Active               bool        `json:"active"`
-		Sortorder            int         `json:"sortOrder"`
-		Description          string      `json:"description"`
-		Maxstorage           int64       `json:"maxStorage"`
-		Maxmemory            int         `json:"maxMemory"`
-		Maxcpu               interface{} `json:"maxCpu"`
-		Maxcores             int         `json:"maxCores"`
-		Maxdisks             int         `json:"maxDisks"`
-		Corespersocket       int         `json:"coresPerSocket"`
-		Customcpu            bool        `json:"customCpu"`
-		Customcores          bool        `json:"customCores"`
-		Custommaxstorage     bool        `json:"customMaxStorage"`
-		Custommaxdatastorage bool        `json:"customMaxDataStorage"`
-		Custommaxmemory      bool        `json:"customMaxMemory"`
-		Addvolumes           bool        `json:"addVolumes"`
-		Memoryoptionsource   interface{} `json:"memoryOptionSource"`
-		Cpuoptionsource      interface{} `json:"cpuOptionSource"`
-		Datecreated          time.Time   `json:"dateCreated"`
-		Lastupdated          time.Time   `json:"lastUpdated"`
-		Regioncode           string      `json:"regionCode"`
-		Visibility           string      `json:"visibility"`
-		Editable             bool        `json:"editable"`
-		Provisiontype        struct {
-			ID                        int    `json:"id"`
-			Name                      string `json:"name"`
-			Code                      string `json:"code"`
-			Rootdiskcustomizable      bool   `json:"rootDiskCustomizable"`
-			Addvolumes                bool   `json:"addVolumes"`
-			Customizevolume           bool   `json:"customizeVolume"`
-			Hasconfigurablecpusockets bool   `json:"hasConfigurableCpuSockets"`
-		} `json:"provisionType"`
-		Tenants   string              `json:"tenants"`
-		Pricesets []morpheus.PriceSet `json:"priceSets"`
-		Config    struct {
-			Storagesizetype string `json:"storageSizeType"`
-			Memorysizetype  string `json:"memorySizeType"`
-			Ranges          struct {
-				Minstorage string `json:"minStorage"`
-				Maxstorage string `json:"maxStorage"`
-				Minmemory  int    `json:"minMemory"`
-				Maxmemory  int    `json:"maxMemory"`
-				Mincores   string `json:"minCores"`
-				Maxcores   string `json:"maxCores"`
-			} `json:"ranges"`
-		} `json:"config"`
-		Zones []struct {
-			ID   int    `json:"id"`
-			Name string `json:"name"`
-			Code string `json:"code"`
-		} `json:"zones"`
-		Permissions struct {
-			Resourcepermissions struct {
-				Defaultstore  bool `json:"defaultStore"`
-				Allplans      bool `json:"allPlans"`
-				Defaulttarget bool `json:"defaultTarget"`
-				Canmanage     bool `json:"canManage"`
-				All           bool `json:"all"`
-				Account       struct {
-					ID int `json:"id"`
-				} `json:"account"`
-				Sites []struct {
-					ID      int    `json:"id"`
-					Name    string `json:"name"`
-					Default bool   `json:"default"`
-				} `json:"sites"`
-				Plans []interface{} `json:"plans"`
-			} `json:"resourcePermissions"`
-		} `json:"permissions"`
-	} `json:"servicePlan"`
 }

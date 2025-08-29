@@ -65,21 +65,6 @@ func (c *Config) Client() (*morpheus.Client, diag.Diagnostics) {
 		var client *morpheus.Client
 		if c.Insecure {
 			client = morpheus.NewClient(c.Url, morpheus.WithDebug(debug), morpheus.Insecure())
-			diags = append(diags, diag.Diagnostic{
-				Severity: diag.Warning,
-				Summary:  "SSL Certificate Verification Disabled",
-				Detail: `
-SSL certificate verification is disabled. To enable verification, set "secure = true" in your
-provider configuration or set environment variable MORPHEUS_API_SECURE to true.
-provider "morpheus" {
-	url = "https://..."
-	.
-	.
-	.
-	secure = true <-- set to true to enable certificate verification
-}
-`,
-			})
 		} else {
 			client = morpheus.NewClient(c.Url, morpheus.WithDebug(debug), morpheus.WithErrCallbackFunc(certErrCallback))
 		}
