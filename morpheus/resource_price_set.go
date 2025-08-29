@@ -34,14 +34,15 @@ func resourcePriceSet() *schema.Resource {
 			"code": {
 				Type:        schema.TypeString,
 				Description: "The code of the price set",
-				Default:     "",
 				ForceNew:    true,
+				Required:    true,
 			},
 			"region_code": {
 				Type:        schema.TypeString,
 				Description: "The region code of the price set",
 				Default:     "",
 				ForceNew:    true,
+				Optional:    true,
 			},
 			"cloud_id": {
 				Type:        schema.TypeInt,
