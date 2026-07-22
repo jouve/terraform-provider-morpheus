@@ -1,5 +1,8 @@
 ## UNRELEASED
 
+BUG FIXES:
+* resource/morpheus_form: always send the `cloudType` config key for `cloud` option types. Morpheus returns an empty cloud list when the key is missing entirely, so a cloud field defined without `cloud_type_id` rendered as "no options found". The key is now emitted (empty when `cloud_type_id` is unset), which keeps the field unfiltered instead of broken.
+
 ## 0.12.0 (February 28, 2024)
 
 NOTES:

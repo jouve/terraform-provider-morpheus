@@ -757,7 +757,8 @@ func resourceFormCreate(ctx context.Context, d *schema.ResourceData, meta interf
 						config["groupFieldType"] = "field"
 						config["group"] = optionTypeConfig["group_code"]
 					}
-					if optionTypeConfig["cloud_type_id"] != nil && optionTypeConfig["cloud_type_id"].(string) != "" {
+					config["cloudType"] = ""
+					if optionTypeConfig["cloud_type_id"] != nil {
 						config["cloudType"] = optionTypeConfig["cloud_type_id"]
 					}
 					row["config"] = config
@@ -973,7 +974,8 @@ func resourceFormCreate(ctx context.Context, d *schema.ResourceData, meta interf
 								config["groupFieldType"] = "field"
 								config["group"] = optionTypeConfig["group_code"]
 							}
-							if optionTypeConfig["cloud_type_id"] != nil && optionTypeConfig["cloud_type_id"].(string) != "" {
+							config["cloudType"] = ""
+							if optionTypeConfig["cloud_type_id"] != nil {
 								config["cloudType"] = optionTypeConfig["cloud_type_id"]
 							}
 							row["config"] = config
@@ -1485,7 +1487,8 @@ func resourceFormUpdate(ctx context.Context, d *schema.ResourceData, meta interf
 					config["groupFieldType"] = "field"
 					config["group"] = optionTypeConfig["group_code"]
 				}
-				if optionTypeConfig["cloud_type_id"] != nil && optionTypeConfig["cloud_type_id"].(string) != "" {
+				config["cloudType"] = ""
+				if optionTypeConfig["cloud_type_id"] != nil {
 					config["cloudType"] = optionTypeConfig["cloud_type_id"]
 				}
 				row["config"] = config
@@ -1700,7 +1703,8 @@ func resourceFormUpdate(ctx context.Context, d *schema.ResourceData, meta interf
 							config["groupFieldType"] = "field"
 							config["group"] = optionTypeConfig["group_code"]
 						}
-						if optionTypeConfig["cloud_type_id"] != nil && optionTypeConfig["cloud_type_id"].(string) != "" {
+						config["cloudType"] = ""
+						if optionTypeConfig["cloud_type_id"] != nil {
 							config["cloudType"] = optionTypeConfig["cloud_type_id"]
 						}
 						row["config"] = config
